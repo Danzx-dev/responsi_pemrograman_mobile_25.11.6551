@@ -1,31 +1,52 @@
 #!/usr/bin/env bash
-# Jalankan di dalam folder proyek (setelah setup.sh). Menghasilkan >=5 commit & 2 branch fitur.
-set -euo pipefail
+set -e
 
-git init -b main
-git add .gitignore pubspec.yaml pubspec.lock analysis_options.yaml README.md android ios web linux macos windows test .metadata 2>/dev/null || git add -A -- . ':!lib' ':!.env'
+# 1. Reset riwayat commit awal tanpa menghapus file proyek dan buat commit dasar main
+git checkout main 2>/dev/null || git checkout -b main
+git branch -D fitur-profil fitur-catatan 2>/dev/null || true
+
+git checkout --orphan temp-main
+git reset
+git add .gitignore pubspec.yaml
 git commit -m "chore: inisialisasi proyek Flutter dan .gitignore"
+git branch -M temp-main main
 
-git add lib/config lib/models lib/utils lib/providers .env.example
-git commit -m "feat: tambah AppConfig (.env), model Student/Note, Validators, AppProvider"
+git add lib/config/app_config.dart lib/utils/validators.dart
+git commit -m "feat: tambah AppConfig (.env) dan validators"
 
-git switch -c fitur-profil
-git add lib/widgets/profile_card.dart lib/screens/profile_screen.dart
-git commit -m "feat(profil): ProfileCard dan ProfileScreen dengan edit profil"
-git switch main
-git merge --no-ff fitur-profil -m "merge: fitur-profil ke main"
+# 2. Buat branch fitur-profil dan simpan commit fitur profil
+git checkout -b fitur-profil
+git add lib/models/student.dart lib/widgets/profile_card.dart
+git commit -m "feat(profil): model Student dan ProfileCard"
 
-git switch -c fitur-catatan
-git add lib/services/secure_storage_service.dart lib/repositories
-git commit -m "feat(catatan): SecureStorageService dan NoteRepository"
-git add lib/widgets/note_card.dart lib/widgets/empty_state.dart lib/screens/note_form_screen.dart
-git commit -m "feat(catatan): NoteCard, EmptyState, NoteFormScreen dengan validasi"
+git add lib/screens/profile_screen.dart
+git commit -m "feat(profil): ProfileScreen dengan edit profil"
+
+# 3. Gabungkan (merge) fitur-profil ke main
+git checkout main
+git merge fitur-profil --no-ff -m "merge: fitur-profil"
+
+# 4. Buat branch fitur-catatan dan simpan commit fitur catatan
+git checkout -b fitur-catatan
+git add lib/models/note.dart lib/services/secure_storage_service.dart lib/repositories/note_repository.dart
+git commit -m "feat(catatan): model Note, SecureStorageService, NoteRepository"
+
+git add lib/providers/app_provider.dart lib/screens/note_form_screen.dart
+git commit -m "feat(catatan): AppProvider dan NoteFormScreen dengan validasi"
+
+git add lib/screens/home_screen.dart lib/widgets/note_card.dart lib/widgets/empty_state.dart
+git commit -m "feat(catatan): HomeScreen, NoteCard, EmptyState, tema"
+
+# 5. Gabungkan (merge) fitur-catatan ke main & buat commit final
+git checkout main
+git merge fitur-catatan --no-ff -m "merge: fitur-catatan"
+
 git add lib/services/api_service.dart lib/screens/users_screen.dart
-git commit -m "feat(http): ApiService GET /users dengan error handling dan UsersScreen"
-git switch main
-git merge --no-ff fitur-catatan -m "merge: fitur-catatan ke main"
+git commit -m "feat: HTTP GET /users dengan error handling"
 
-git add lib/main.dart lib/screens/home_screen.dart
-git commit -m "feat: HomeScreen, navigasi, dan tema terpusat"
+git add .
+git commit -m "docs: finalisasi proyek"
 
+# 6. Push ulang ke GitHub dan tampilkan grafik log
+git push -f -u origin --all
 git log --graph --oneline --all
